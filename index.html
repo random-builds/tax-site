@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Income Tax Calculator</h2>
+
+<form id="tax-form">
+    <label for="monthlyIncome">Monthly Income:</label><br>
+    <input type="number" id="monthlyIncome" name="income"><br><br>
+    <input type="button" value="Calculate" onclick="calculateTax()">
+</form>
+
+<p id="contractual"></p>
+<p id="regular"></p>
+<p id="contractualFromRegular"></p>
+<p id="misc"></p>
+
+<script type="application/javascript">
+    const contractualMaxForEightPercentTax = 3_000_000
+    function calculateTax() {
+        const monthlyIncome = document.getElementById("monthlyIncome").value;
+        let [cSummary, cTotal, cTakeHome] = calculateContractual(monthlyIncome)
+        document.getElementById("contractual").innerText = cSummary
+        let [rSummary, rTotal, rTakeHome] = calculateRegular(monthlyIncome, 25)
+        document.getElementById("regular").innerText = rSummary
+        let [rcSummary, _, rcTakeHome] = calculateContractual(rTotal / 12)
+        document.getElementById("contractualFromRegular").innerText = rcSummary
+
+        let extraMessage = "";
+        if (cTotal > contractualMaxForEightPercentTax) {
+            const excess = cTotal - contractualMaxForEightPercentTax
+            let [_, total, takeHome] = calculateContractual(contractualMaxForEightPercentTax / 12)
+            extraMessage += "\nLimiting total compensation to " + contractualMaxForEightPercentTax
+                + " will have take home of " + takeHome
+                + " and " + roundDown((excess / monthlyIncome) * 21.6) + " days (" + roundDown(excess / monthlyIncome) + " month/s) of leave"
+        }
+        document.getElementById("misc").innerText = "Cost difference for contractual and regular on same monthly: " + (rTotal - cTotal)
+            + "\nTake home difference given same monthly for contractual and regular: " + (cTakeHome - rTakeHome)
+            + "\nTake home difference given same cost for contractual and regular: " + (rcTakeHome - rTakeHome)
+            + extraMessage
+    }
+
+    function calculateContractual(monthlyIncome) {
+        const total = monthlyIncome * 12;
+        let message = "Contractual:"
+            + "\nTotal is: " + total
+        let takeHome;
+        if (total <= contractualMaxForEightPercentTax) {
+            const tax = total * 0.08
+            takeHome = (total - tax)
+            message += "\nTax(8% below 3m) is: " + tax
+                + "\nTake Home pay is: " + takeHome
+        } else {
+            const vat = total * 0.12
+            const taxable = total * 0.6
+            const graduatedTax = getGraduatedTax(taxable)
+            takeHome = total - vat - graduatedTax
+            message += "\nVat is: " + roundDown(vat)
+                + "\nTaxable after 40% OSD(optional standard deduction): " + roundDown(taxable)
+                + "\nGraduated tax for taxable income: " + roundDown(graduatedTax)
+                + "\nTake Home pay (total - vat - graduate tax): " + roundDown(takeHome)
+        }
+        return [message, total, takeHome]
+    }
+
+    function calculateRegular(monthlyIncome, leaves) {
+        const leavesCost = roundDown(leaves / 21.6) * monthlyIncome
+        let taxable = 0
+        let takeHome = 0
+
+        let message = "Regular:"
+        if (monthlyIncome <= 90_000) {
+            takeHome += monthlyIncome
+            message += "\n13th month pay: " + takeHome + "(non-taxable)"
+        } else {
+            takeHome += 90_000
+            taxable += monthlyIncome - 90_000
+            message += "\n13th month pay: " + takeHome + "(non-taxable), " + taxable + "(graduated tax)"
+        }
+
+        taxable += monthlyIncome * 12
+        const graduatedTax = getGraduatedTax(taxable)
+        const totalCost = roundDown((monthlyIncome * 13) + leavesCost)
+        takeHome = roundDown(takeHome + taxable - graduatedTax);
+        message += "\nTotal cost is: " + totalCost
+            + "\nLeaves cost is: " + roundDown(leavesCost)
+            + "\nTaxable is: " + roundDown(taxable)
+            + "\nGraduated tax is: " + roundDown(graduatedTax)
+            + "\nTake Home pay is: " + takeHome
+
+        return [message, totalCost, takeHome]
+    }
+
+    function roundDown(number, decimals = 2) {
+        const factor = Math.pow(10, decimals);
+        return Math.floor(number * factor) / factor;
+    }
+
+    function getGraduatedTax(taxable) {
+        if (taxable <= 250_000) {
+            return 0
+        } else if (taxable <= 400_000) {
+            return (taxable - 250_000) * 0.15
+        } else if (taxable <= 800_000) {
+            return 22_500 + ((taxable - 400_000) * 0.20)
+        } else if (taxable <= 2_000_000) {
+            return 102_500 + ((taxable - 800_000) * 0.25)
+        } else if (taxable <= 8_000_000) {
+            return 402_500 + ((taxable - 2_000_000) * 0.30)
+        } else {
+            return 2_202_500 + ((taxable - 2_000_000) * 0.35)
+        }
+    }
+</script>
+
+</body>
