@@ -21,10 +21,10 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ github.repository }}
+        role-to-assume: ${{ github.event.repository.name }}
         aws-region: us-east-2
 
     - name: Deploy
       run: |
         account=`aws sts get-caller-identity | jq -r .Account`
-        aws s3 sync . s3://${{ github.repository }}-${account} --exclude ".git/*" --exclude ".github/*"
+        aws s3 sync . s3://${{ github.event.repository.name }}-${account} --exclude ".git/*" --exclude ".github/*"
