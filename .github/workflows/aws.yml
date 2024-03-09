@@ -28,4 +28,4 @@ jobs:
     - name: Deploy
       run: |
         account=`aws sts get-caller-identity | jq -r .Account`
-        aws s3 sync . s3://${{ github.event.repository.name }}-${account} --exclude ".git/*" --exclude ".github/*" --delete
+        aws s3 sync --sse AES256 . s3://${{ github.event.repository.name }}-${account} --exclude ".git/*" --exclude ".github/*" --delete
